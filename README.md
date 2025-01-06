@@ -9,6 +9,7 @@ Sophia is a modular Go service that helps you manage your digital life by provid
   - Gmail
   - Google Docs
   - Slack
+  - Todoist
 - Vector-based semantic search using pgvector
 - OpenAI GPT-4 integration for intelligent responses
 - Modular architecture for easy addition of new data sources
@@ -21,6 +22,7 @@ Sophia is a modular Go service that helps you manage your digital life by provid
 - OpenAI API key
 - Google Cloud Platform credentials
 - Slack API token
+- Todoist API token
 
 ## Environment Variables
 
@@ -36,6 +38,9 @@ GOOGLE_CREDENTIALS=path_to_your_credentials.json
 # Slack
 SLACK_TOKEN=your_slack_bot_token
 SLACK_CHANNELS=general,random,team
+
+# Todoist
+TODOIST_API_TOKEN=your_todoist_api_token
 
 # PostgreSQL
 POSTGRES_HOST=localhost
