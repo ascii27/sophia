@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
-	
+
 	"github.com/michaelgalloway/sophia/internal/auth"
 	"github.com/michaelgalloway/sophia/internal/datasources"
 )
 
 type GmailSource struct {
-	service   *gmail.Service
-	creds     []byte
-	tokenDir  string
-	tokenMgr  *auth.TokenManager
+	service  *gmail.Service
+	creds    []byte
+	tokenDir string
+	tokenMgr *auth.TokenManager
 }
 
 func New(config map[string]interface{}) (datasources.DataSource, error) {
@@ -30,7 +30,7 @@ func New(config map[string]interface{}) (datasources.DataSource, error) {
 	if !ok {
 		return nil, fmt.Errorf("token_dir not provided in config")
 	}
-	
+
 	return &GmailSource{
 		creds:    []byte(credentials),
 		tokenDir: tokenDir,
@@ -69,64 +69,67 @@ func (g *GmailSource) Initialize(ctx context.Context) error {
 }
 
 func (g *GmailSource) FetchData(ctx context.Context, since time.Time) ([]datasources.Document, error) {
-	query := fmt.Sprintf("after:%s", since.Format("2006/01/02"))
-	
+	query := fmt.Sprintf("after:%s", since.Format("2024/12/25"))
+
 	var docs []datasources.Document
 	pageToken := ""
-	
+
 	for {
-		req := g.service.Users.Messages.List("me").Q(query)
+		req := g.service.Users.Messages.List("me").MaxResults(25).Q(query)
 		if pageToken != "" {
 			req.PageToken(pageToken)
 		}
-		
+
 		r, err := req.Do()
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch messages: %w", err)
 		}
-		
+
 		for _, msg := range r.Messages {
 			message, err := g.service.Users.Messages.Get("me", msg.Id).Do()
 			if err != nil {
 				continue
 			}
-			
+
 			headers := make(map[string]string)
 			for _, header := range message.Payload.Headers {
 				headers[header.Name] = header.Value
 			}
-			
+
 			content := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\n\n%s",
 				headers["From"],
 				headers["To"],
 				headers["Subject"],
 				getMessage(message),
 			)
-			
+
 			timestamp := time.Unix(message.InternalDate/1000, 0)
-			
+
 			doc := datasources.Document{
-				ID:      message.Id,
-				Content: content,
+				ID:        message.Id,
+				Content:   datasources.TruncateContent(content),
+				Title:     headers["Subject"],
+				URL:       fmt.Sprintf("https://mail.google.com/mail/u/0/#inbox/%s", message.Id),
+				Source:    g.Name(),
+				Timestamp: timestamp,
 				Metadata: map[string]interface{}{
 					"from":    headers["From"],
 					"to":      headers["To"],
 					"subject": headers["Subject"],
 					"labels":  message.LabelIds,
+					"raw":     message.Raw,
 				},
-				Source:    g.Name(),
-				Timestamp: timestamp,
 			}
-			
+
 			docs = append(docs, doc)
 		}
-		
+		break //Always break
 		pageToken = r.NextPageToken
 		if pageToken == "" {
 			break
 		}
 	}
-	
+
 	return docs, nil
 }
 
@@ -134,19 +137,19 @@ func getMessage(msg *gmail.Message) string {
 	if msg.Payload == nil {
 		return ""
 	}
-	
+
 	var text string
 	var walk func(*gmail.MessagePart)
 	walk = func(part *gmail.MessagePart) {
 		if part.MimeType == "text/plain" && part.Body != nil && part.Body.Data != "" {
 			text += part.Body.Data
 		}
-		
+
 		for _, p := range part.Parts {
 			walk(p)
 		}
 	}
-	
+
 	walk(msg.Payload)
 	return text
 }

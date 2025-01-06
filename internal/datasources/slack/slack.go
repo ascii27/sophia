@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"github.com/slack-go/slack"
-	
+
 	"github.com/michaelgalloway/sophia/internal/datasources"
 )
 
 type SlackSource struct {
 	client *slack.Client
 	config struct {
-		token   string
+		token    string
 		channels []string
 	}
 }
@@ -23,18 +23,18 @@ func New(config map[string]interface{}) (datasources.DataSource, error) {
 	if !ok {
 		return nil, fmt.Errorf("token not provided in config")
 	}
-	
+
 	channels, ok := config["channels"].([]string)
 	if !ok {
 		return nil, fmt.Errorf("channels not provided in config")
 	}
-	
+
 	s := &SlackSource{
 		client: slack.New(token),
 	}
 	s.config.token = token
 	s.config.channels = channels
-	
+
 	return s, nil
 }
 
@@ -49,37 +49,37 @@ func (s *SlackSource) Initialize(ctx context.Context) error {
 
 func (s *SlackSource) FetchData(ctx context.Context, since time.Time) ([]datasources.Document, error) {
 	var docs []datasources.Document
-	
+
 	for _, channelName := range s.config.channels {
 		channel, err := s.findChannel(channelName)
 		if err != nil {
 			continue
 		}
-		
+
 		params := slack.GetConversationHistoryParameters{
 			ChannelID: channel.ID,
-			Oldest:    fmt.Sprintf("%d", since.Unix()),
+			Oldest:    fmt.Sprintf("%d", time.Date(2024, time.June, 10, 23, 0, 0, 0, time.UTC).Unix()),
 			Inclusive: true,
 		}
-		
+
 		for {
 			history, err := s.client.GetConversationHistory(&params)
 			if err != nil {
 				break
 			}
-			
+
 			for _, msg := range history.Messages {
 				timestamp, err := parseSlackTimestamp(msg.Timestamp)
 				if err != nil {
 					continue
 				}
-				
+
 				content := fmt.Sprintf("Channel: %s\nUser: %s\nMessage: %s",
 					channelName,
 					msg.User,
 					msg.Text,
 				)
-				
+
 				// Get thread replies if they exist
 				if msg.ThreadTimestamp != "" {
 					var allReplies []slack.Message
@@ -111,7 +111,7 @@ func (s *SlackSource) FetchData(ctx context.Context, since time.Time) ([]datasou
 						}
 					}
 				}
-				
+
 				doc := datasources.Document{
 					ID:      msg.Timestamp,
 					Content: content,
@@ -125,17 +125,17 @@ func (s *SlackSource) FetchData(ctx context.Context, since time.Time) ([]datasou
 					Source:    s.Name(),
 					Timestamp: timestamp,
 				}
-				
+
 				docs = append(docs, doc)
 			}
-			
+
 			if !history.HasMore {
 				break
 			}
 			params.Cursor = history.ResponseMetaData.NextCursor
 		}
 	}
-	
+
 	return docs, nil
 }
 
@@ -147,25 +147,25 @@ func (s *SlackSource) findChannel(channelName string) (*slack.Channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, channel := range channels {
 		if channel.Name == channelName {
 			return &channel, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("channel %s not found", channelName)
 }
 
 func parseSlackTimestamp(ts string) (time.Time, error) {
 	sec := int64(0)
 	nsec := int64(0)
-	
+
 	_, err := fmt.Sscanf(ts, "%d.%d", &sec, &nsec)
 	if err != nil {
 		return time.Time{}, err
 	}
-	
+
 	return time.Unix(sec, nsec), nil
 }
 

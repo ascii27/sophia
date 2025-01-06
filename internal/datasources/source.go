@@ -9,6 +9,8 @@ import (
 type Document struct {
 	ID        string
 	Content   string
+	Title     string
+	URL       string
 	Metadata  map[string]interface{}
 	Source    string
 	Timestamp time.Time
@@ -28,3 +30,15 @@ type DataSource interface {
 
 // SourceFactory is a function type that creates new DataSource instances
 type SourceFactory func(config map[string]interface{}) (DataSource, error)
+
+// MaxContentLength is the maximum number of characters we'll allow for document content
+// This is a conservative estimate to stay within OpenAI's 8192 token limit
+const MaxContentLength = 6000
+
+// TruncateContent ensures content stays within reasonable token limits
+func TruncateContent(content string) string {
+	if len(content) <= MaxContentLength {
+		return content
+	}
+	return content[:MaxContentLength] + "... (truncated)"
+}

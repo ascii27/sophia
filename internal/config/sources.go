@@ -1,24 +1,32 @@
 package config
 
-// DataSourceConfig defines which data sources are enabled
+// DataSourceConfig controls which data sources are enabled
 type DataSourceConfig struct {
 	GoogleCalendar bool
 	Gmail          bool
 	GoogleDocs     bool
 	Slack          bool
+	Todoist        bool
 }
 
-// DefaultConfig returns a configuration with all sources enabled
+// DefaultConfig returns the default configuration
 func DefaultConfig() DataSourceConfig {
 	return DataSourceConfig{
 		GoogleCalendar: true,
-		Gmail:          false,
+		Gmail:          true,
 		GoogleDocs:     true,
-		Slack:          false,
+		Slack:          true,
+		Todoist:        true,
 	}
 }
 
-// DisableAll returns a configuration with all sources disabled
+// DisableAll returns a config with all sources disabled
 func DisableAll() DataSourceConfig {
-	return DataSourceConfig{}
+	return DataSourceConfig{
+		GoogleCalendar: false,
+		Gmail:         false,
+		GoogleDocs:    false,
+		Slack:         false,
+		Todoist:       false,
+	}
 }

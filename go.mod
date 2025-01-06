@@ -8,7 +8,7 @@ require (
 	github.com/pgvector/pgvector-go v0.1.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.10.1
-	github.com/sashabaranov/go-openai v1.17.9
+	github.com/sashabaranov/go-openai v1.36.1
 	github.com/slack-go/slack v0.15.0
 	golang.org/x/oauth2 v0.15.0
 	google.golang.org/api v0.154.0

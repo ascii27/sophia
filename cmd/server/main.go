@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/joho/godotenv"
@@ -19,6 +20,7 @@ import (
 	"github.com/michaelgalloway/sophia/internal/datasources/gdocs"
 	"github.com/michaelgalloway/sophia/internal/datasources/gmail"
 	"github.com/michaelgalloway/sophia/internal/datasources/slack"
+	"github.com/michaelgalloway/sophia/internal/datasources/todoist"
 	"github.com/michaelgalloway/sophia/internal/embeddings"
 	"github.com/michaelgalloway/sophia/internal/scheduler"
 	"github.com/michaelgalloway/sophia/internal/service"
@@ -77,7 +79,8 @@ func initializeSources(ctx context.Context, sourceConfig config.DataSourceConfig
 
 	if sourceConfig.Slack {
 		slackConfig := map[string]interface{}{
-			"token": os.Getenv("SLACK_TOKEN"),
+			"token":    os.Getenv("SLACK_TOKEN"),
+			"channels": strings.Split(os.Getenv("SLACK_CHANNELS"), ","),
 		}
 
 		slackSource, err := slack.New(slackConfig)
@@ -88,6 +91,19 @@ func initializeSources(ctx context.Context, sourceConfig config.DataSourceConfig
 			return nil, err
 		}
 		sources[slackSource.Name()] = slackSource
+	}
+
+	if sourceConfig.Todoist {
+		todoistConfig := map[string]interface{}{
+			"token":  os.Getenv("TODOIST_TOKEN"),
+			"filter": os.Getenv("TODOIST_FILTER"),
+		}
+
+		todoistSource, err := todoist.New(todoistConfig)
+		if err != nil {
+			log.Fatalf("Failed to create Todoist source: %v", err)
+		}
+		sources["todoist"] = todoistSource
 	}
 
 	return sources, nil
@@ -109,10 +125,11 @@ func main() {
 
 	// Configure which data sources to enable
 	sourceConfig := config.DataSourceConfig{
-		GoogleCalendar: true,  // Enable Google Calendar
-		Gmail:          false, // Disable Gmail for now
-		GoogleDocs:     true,  // Disable Google Docs for now
-		Slack:          false, // Disable Slack for now
+		GoogleCalendar: false, // Enable Google Calendar
+		Gmail:          false, // Enable Gmail for now
+		GoogleDocs:     false, // Enable Google Docs for now
+		Slack:          true,  // Enable Slack for now
+		Todoist:        true,  // Enable Todoist
 	}
 
 	// Initialize data sources

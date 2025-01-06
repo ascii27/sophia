@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"log"
 	"sync"
 	"time"
 
@@ -38,6 +39,9 @@ func NewScheduler(
 
 // Start begins the scheduling of data fetching jobs
 func (s *Scheduler) Start(ctx context.Context) error {
+
+	s.vectorDB.DeleteAll(ctx)
+
 	// Schedule hourly jobs for each source
 	for name, source := range s.sources {
 		source := source // Create new variable for closure
@@ -67,27 +71,34 @@ func (s *Scheduler) fetchAndProcess(ctx context.Context, source datasources.Data
 	since := s.lastSync[name]
 	s.mu.RUnlock()
 
+	log.Printf("Fetching %v", source.Name())
+
 	docs, err := source.FetchData(ctx, since)
 	if err != nil {
 		// TODO: Add proper error handling/logging
 		return
 	}
 
+	log.Printf("Found %d number of docs", len(docs))
 	if len(docs) == 0 {
 		return
 	}
 
+	log.Printf("Creating embeddings for %v", source.Name())
 	vectors, err := s.embeddingService.CreateEmbeddings(ctx, docs)
 	if err != nil {
-		// TODO: Add proper error handling/logging
+		log.Printf("Error creating embedding: %v", err)
 		return
 	}
+	log.Printf("Created %d embeddings for %v", len(vectors), source.Name())
 
+	log.Printf("Storing embeddings for %v", source.Name())
 	err = s.vectorDB.Store(ctx, docs, vectors)
 	if err != nil {
-		// TODO: Add proper error handling/logging
+		log.Printf("Error storing embedding: %v", err)
 		return
 	}
+	log.Printf("Stored %d embeddings for %v", len(vectors), source.Name())
 
 	s.mu.Lock()
 	s.lastSync[name] = time.Now()

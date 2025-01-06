@@ -107,15 +107,15 @@ func (g *GoogleDocsSource) FetchData(ctx context.Context, since time.Time) ([]da
 			modTime, _ := time.Parse(time.RFC3339, file.ModifiedTime)
 
 			document := datasources.Document{
-				ID:      file.Id,
-				Content: content,
-				Metadata: map[string]interface{}{
-					"title":   doc.Title,
-					"owners":  file.Owners,
-					"doc_url": fmt.Sprintf("https://docs.google.com/document/d/%s", file.Id),
-				},
+				ID:        file.Id,
+				Content:   datasources.TruncateContent(content),
+				Title:     file.Name,
+				URL:       fmt.Sprintf("https://docs.google.com/document/d/%s", file.Id),
 				Source:    g.Name(),
 				Timestamp: modTime,
+				Metadata: map[string]interface{}{
+					"owners": file.Owners,
+				},
 			}
 
 			docs = append(docs, document)

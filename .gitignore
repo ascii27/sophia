@@ -1,0 +1,45 @@
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Application specific
+.env
+/tokens/
+*.log
+
+# Binary output directories
+/bin/
+/dist/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Debug files
+debug
+debug.test
+__debug_bin
+
+# Test coverage
+coverage.txt
+coverage.html
+
+# Air live reload
+tmp/
+
+# Credentials
+google-creds*.json
